@@ -2,6 +2,10 @@ library(shiny)
 library(shinydashboard)
 library(tidyverse)
 library(DT)
+library(bslib)
+library(thematic)
+
+thematic_shiny(font = "auto")
 
 dig_data <- read.csv("DIG.csv")
 dig_data <- dig_data |>
@@ -11,7 +15,7 @@ dig_data <- dig_data |>
   mutate(
     TRTMT_LABEL = factor(TRTMT, levels = c(0,1), labels = c("Placebo", "Digoxin")),
     SEX_LABEL = factor(SEX, levels = c(1,2), labels = c("Male", "Female")),
-    RACE_LABEL = factor(RACE, levels = c(1,2), labels = c("White", "Nonwhite")),
+    RACE_LABEL = factor(RACE, levels = c(1,2), labels = c("White", "Non-white")),
     HYPERTEN_LABEL = factor(HYPERTEN, levels = c(0,1), labels = c("No", "Yes")),
     DIABETES_LABEL = factor(DIABETES, levels = c(0,1), labels = c("No", "Yes")),
     PREVMI_LABEL = factor(PREVMI, levels = c(0,1), labels = c("No", "Yes")),
@@ -21,13 +25,13 @@ dig_data <- dig_data |>
 #Creating UI for app
 library(shiny)
 
-ui <- dashboardPage(
-  skin = "blue",
-  dashboardHeader(
-    title = "DIG Trial Dashboard", titleWidth = 300
-    ),
-  dashboardSidebar(
+ui <- page_sidebar(
+  theme = bs_theme(version = 5,preset = "bootstrap"),
+  title = "Dig Trail Dashboard",
+  
+  sidebar = sidebar(
     width = 300,
+    input_dark_mode(id = "dark_mode", mode = "light"),
     selectInput("filter_trt", "Select Treatment Group:", choices = c("All", "Placebo", "Digoxin")),
     selectInput("filter_sex", "Select Patient Sex:", choices = c("All", "Male", "Female")),
     sliderInput(
@@ -40,13 +44,32 @@ ui <- dashboardPage(
 )
 ),
 
-dashboardBody(
-  fluidRow(valueBoxOutput("box_total", width = 6),
-           valueBoxOutput("box_deaths", width = 6)
+layout_column_wrap(
+  width = 1/2,
+  value_box(
+    title = "Filtered Patients",
+    value = textOutput("val_total"),
+    showcase = icon("users"),
+    theme = "primary"
   ),
-fluidRow(box(width = 6, title = "Age Distribution", status = "primary", solidHeader = TRUE, plotOutput("plot_age")),
-         box(width = 6, title = "Patient Record Table", status = "warning", solidHeader = TRUE, DTOutput("table_dig"))
-)
+  value_box(
+    title = "All Cause Mortality Events",
+    value = textOutput("val_deaths"),
+    showcase = icon("heart-pulse"),
+    theme = "teal"
+  )
+),
+layout_column_wrap(
+  width = 1/2,
+  heights_equal = "row",
+  card(
+    card_header("Age Distribution"),
+    plotOutput("plot_age")
+  ),
+  card(
+    card_header("Patient Record Table"),
+    DTOutput("table_dig")
+  )
 )
 )
 
@@ -63,22 +86,12 @@ server <- function(input, output, session) {
     data |> filter(AGE >= input$filter_age[1] & AGE <= input$filter_age[2])
     
   })
-  output$box_total <- renderValueBox({
-    valueBox(
-      value = format(nrow(dig_sub()), big.mark = ","), 
-      "Filtered Patients", 
-      icon = icon("users"), 
-      color = "blue"
-    )
+  output$val_total <- renderText({
+      format(nrow(dig_sub()), big.mark = ",")
   })
-  output$box_deaths <- renderValueBox({
+  output$val_deaths <- renderText({
     count <- sum(dig_sub()$DEATH_LABEL == "Death", na.rm = TRUE)
-    valueBox(
-      format(count, big.mark = ", "),
-      "All Cause Mortality Events",
-      icon = icon("heart-pulse"),
-      color = "teal"
-    )
+    format(count, big.mark = ", ")
   })
   output$plot_age <- renderPlot({
     ggplot(dig_sub(), aes(x = AGE, fill = TRTMT_LABEL)) +
@@ -91,7 +104,6 @@ server <- function(input, output, session) {
     datatable(
       dig_sub(),
       options = list(pageLength = 7, scrollX = TRUE, dom = 'tp'),
-      style = 'bootstrap',
       class = 'table-bordered table-striped table-hover'
     )
   })
