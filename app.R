@@ -113,7 +113,7 @@ server <- function(input, output, session) {
   output$plot_age <- renderPlot({
     ggplot(dig_sub(), aes(x = AGE, fill = TRTMT_LABEL)) +
       geom_histogram(bins = 25, color = "#FFFFFF", alpha = 0.85, position = "identity") +
-      scale_fill_manual(values = c("Placebo" = "#4C78A8", "Digoxin" = "#F58518"))+
+      scale_fill_manual(values = c("Placebo" = "gold", "Digoxin" = "brown"))+
       theme_minimal() +
       labs(x = "Patient Age (Years)", y = "Patient Count", fill = "Treatment Group")
   })
