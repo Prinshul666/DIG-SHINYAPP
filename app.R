@@ -25,9 +25,9 @@ dig_data <- dig_data |>
 #Creating UI for app
 library(shiny)
 
-ui <- page_sidebar(
+ui <- page_navbar(
   theme = bs_theme(version = 5,preset = "bootstrap"),
-  title = "Dig Trail Dashboard",
+  title = "Dig Trial Dashboard",
   
   sidebar = sidebar(
     width = 300,
@@ -43,7 +43,23 @@ ui <- page_sidebar(
               max(dig_data$AGE, na.rm = TRUE))
 )
 ),
-
+#info page
+nav_panel(
+  title = "Info & Background",
+  card(
+    card_header("Digitalis Investigation Group (DIG) Trial Overview"),
+    p("The Digitalis Investigation Group (DIG) trial was a randomized, double blind, multicenter clinical study designed to evaluate the safety and efficacy of digoxin in patients with heart failure in sinus rhytm."),
+    tags$ul(
+      tags$li(strong("Total Sample Size:"), "N = 6,800 randomized heart failure patients."),
+      tags$li(strong("Primary Clinical Outcomes:"), "All cause mortality (DEATH) and Heart Failure Hospitalization (DWHF)."),
+      tags$li(strong("Key Variables Evaluated:"), "Baseline patient demographics (Age, Sex , Race, BMI), vital parameters (SYSBP, DIABP, Heart Rate), and clinical comorbidities (Hypertension, Diabetes, Prior MI).")
+      
+    )
+  )
+),
+#main dashboard
+nav_panel(
+  title = "Dashboard",
 layout_column_wrap(
   width = 1/2,
   value_box(
@@ -72,6 +88,7 @@ layout_column_wrap(
   )
 )
 )
+)
 
 #server
 server <- function(input, output, session) {
@@ -95,14 +112,29 @@ server <- function(input, output, session) {
   })
   output$plot_age <- renderPlot({
     ggplot(dig_sub(), aes(x = AGE, fill = TRTMT_LABEL)) +
-      geom_histogram(bins = 25, color = "#FFFFFF", alpha = 0.8, position = "identity") +
+      geom_histogram(bins = 25, color = "#FFFFFF", alpha = 0.85, position = "identity") +
       scale_fill_manual(values = c("Placebo" = "#4C78A8", "Digoxin" = "#F58518"))+
       theme_minimal() +
       labs(x = "Patient Age (Years)", y = "Patient Count", fill = "Treatment Group")
   })
   output$table_dig <- renderDT({
+    display_df <- dig_sub() |>
+      select (
+        "Patient ID" = ID,
+        "Treatment" = TRTMT_LABEL,
+        "Age" = AGE,
+        "Sex" = SEX_LABEL,
+        "Race" = RACE_LABEL,
+        "BMI" = BMI,
+        "Systolic BP" = SYSBP,
+        "Diastolic BP" = DIABP,
+        "Heart Rate" = HEARTRTE,
+        "Hypertension" = HYPERTEN_LABEL,
+        "Diabetes" = DIABETES_LABEL,
+        "Status" = DEATH_LABEL
+       )
     datatable(
-      dig_sub(),
+      display_df,
       options = list(pageLength = 7, scrollX = TRUE, dom = 'tp'),
       class = 'table-bordered table-striped table-hover'
     )
