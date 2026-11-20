@@ -5,7 +5,7 @@ library(DT)
 library(bslib)
 library(thematic)
 
-thematic_shiny(font = "auto")
+thematic_shiny(font = font_spec("Inter",scale = 1.0))
 
 dig_data <- read.csv("DIG.csv")
 dig_data <- dig_data |>
@@ -26,9 +26,46 @@ dig_data <- dig_data |>
 library(shiny)
 
 ui <- page_navbar(
-  theme = bs_theme(version = 5,preset = "bootstrap"),
+  theme = bs_theme(version = 5,
+                   preset = "bootstrap",
+                   base_font = font_google("Inter"),
+                   heading_font = font_google("Montserrat")
+                   ),
   title = "Dig Trial Dashboard",
-  
+  header = tags$head(
+  tags$style(HTML("
+    .navbar{
+      position: relative !important;
+      min-height: 46px !important;
+      padding-top: 4px !important;
+      padding-bottom: 4px !important;
+    }
+    .navbar .container-fluid {
+      position: static !important;
+      min-height: 40px;
+    }
+    .navbar-brand {
+      position: absolute !important;
+      transform: translate(-50%, -50%) !important;
+      left: 50% !important;
+      top: 50% !important;
+      font-family: 'Montserrat', sans-serif !important;
+      font-weight: 800 !important;
+      font-size: 1.45rem !important;
+      line-height: 1.2 !important;
+      letter-spacing: 0.02em;
+      margin: 0 !important;
+      padding: 4px 16px !important;
+      border-radius: 999px
+      
+    }
+    .navbar-nav .nav-link{
+      padding-top: 4px !important;
+      padding-bottom: 4px !important
+    }
+    }"))
+  ),
+
   sidebar = sidebar(
     width = 300,
     input_dark_mode(id = "dark_mode", mode = "light"),
@@ -46,16 +83,66 @@ ui <- page_navbar(
 #info page
 nav_panel(
   title = "Info & Background",
+  layout_column_wrap(
+    width = 1,
+    card(
+      card_header("What Is This Study About? (Plain-Language Guide)"),
+      p(
+        "The ", strong("Digitalis Investigation Group (DIG) trail"),
+        "was a large medical study testing a heart medication called ", strong("digoxin"),
+        "in people living with ", strong("heart failure"), ".Heart failure does not mean the heart has stopped working-it means the heart muscle is weaker or stiffer than usual and has to work harder to pump blood around the body."
+      ),
+      p(
+        "To see whether digoxin genuinely helped patients, researchers randomly divided participants into two groups: one received ",
+        strong("digoxin"), " (an active medicine) and the other received a ", strong("digoxin"),
+        " (an inactive pill with no medicine). Neither the patients nor the doctors knew who got which pill during the study-this is called a ",
+        strong("double-blind"), "trial, which helps prevent bias."
+      )
+    )
+  ),
+  layout_column_wrap(
+    width = 1/2,
+    card(
+      card_header("Key Terms Made Simple"),
+      tags$ul(
+        tags$li(
+          strong("Placebo vs. Digoxin: "),
+          "A comparison group used as a baseline so doctors can tell if changes come from the drug itself or from normal day-to-day health changes."
+        ),
+        tags$li(
+          strong("All-Cause Mortality (DEATH): "),
+          "The total number of patients who passed away from any cause during the follow-up period."
+        ),
+        tags$li(
+          strong("Heart Failure Hospitalization (DWHF): "),
+          "Whether a patient died or had to be admitted to the hospital due to worsening heart failure symptoms."
+        ),
+        tags$li(
+          strong("Ejection Fraction (EJF_PER): "),
+          "A percentage showing how much blood the heart's main pumping chamber pushes out with each beat. Lower number mean weaker pumping strength. "
+        ),
+        tags$li(
+          strong("Blood Pressure (SYSBP / DIABP): "),
+          "Systolic BP (top number) measures pressure when the heart beats; Diastolic BP (bottom number) measures pressure when the heart rests between beats."
+        )
+      )
+    ),
   card(
-    card_header("Digitalis Investigation Group (DIG) Trial Overview"),
-    p("The Digitalis Investigation Group (DIG) trial was a randomized, double blind, multicenter clinical study designed to evaluate the safety and efficacy of digoxin in patients with heart failure in sinus rhytm."),
+    card_header("Trial Snapshot & How to Use This Dashboard"),
     tags$ul(
-      tags$li(strong("Total Sample Size:"), "N = 6,800 randomized heart failure patients."),
-      tags$li(strong("Primary Clinical Outcomes:"), "All cause mortality (DEATH) and Heart Failure Hospitalization (DWHF)."),
-      tags$li(strong("Key Variables Evaluated:"), "Baseline patient demographics (Age, Sex , Race, BMI), vital parameters (SYSBP, DIABP, Heart Rate), and clinical comorbidities (Hypertension, Diabetes, Prior MI).")
-      
+      tags$li(strong("Total Participants: "), "6,800 patients enrolled across multiple clinical centers."),
+      tags$li(strong("Medical Conditions Tracked: "), "High blood pressure (Hypertension), Diabetes, and prior heart attack (Prior MI)."),
+      tags$li(
+        strong("Using the Filters: "), 
+        "Use the left sidebar to narrow patients by treatment group, sex, or age range. The summary cards, charts, and table automatically update to show only that matching group."
+        ),
+      tags$li(
+        strong("Reading the Charts: "),
+        "The histogram shows how many patients fall in each age bracket,while the scatterplot lets you spot patterns between age and health measurements."
+      )
     )
   )
+ )
 ),
 #main dashboard
 nav_panel(
@@ -83,10 +170,27 @@ layout_column_wrap(
     plotOutput("plot_age")
   ),
   card(
+    card_header("Age vs. Health Measure (Scatter Plot)"),
+    selectInput(
+      inputId = "scatter_y",
+      label = "Compare Age Against:",
+      choices = c(
+        "Systolic Blood Pressure (mmHg)" = "SYSBP",
+        "Body Mass Index (BMI)" = "BMI",
+        "Ejection Fraction (%)" = "EJF_PER"
+      ),
+      selected = "SYSBP"
+    ),
+    plotOutput("plot_scatter")
+  )
+  ),
+  layout_column_wrap(
+    width = 1,
+    card(
     card_header("Patient Record Table"),
     DTOutput("table_dig")
-  )
-)
+    )
+    )
 )
 )
 
@@ -112,10 +216,31 @@ server <- function(input, output, session) {
   })
   output$plot_age <- renderPlot({
     ggplot(dig_sub(), aes(x = AGE, fill = TRTMT_LABEL)) +
-      geom_histogram(bins = 25, color = "#FFFFFF", alpha = 0.85, position = "identity") +
+      geom_histogram(bins = 25, color = "white", alpha = 0.85, position = "identity") +
       scale_fill_manual(values = c("Placebo" = "gold", "Digoxin" = "brown"))+
       theme_minimal() +
       labs(x = "Patient Age (Years)", y = "Patient Count", fill = "Treatment Group")
+  })
+  
+  output$plot_scatter <- renderPlot({
+    y_col <- input$scatter_y
+    y_label <- switch(
+      y_col,
+      "SYSBP" = "Systolic Blood Pressure (mmHg)",
+      "BMI" = "Body Mass Index (BMI)",
+      "EJF_PER" = "Ejection Fraction (%)"
+    )
+  
+    ggplot(dig_sub(),aes(x = AGE, y = .data[[y_col]], color = TRTMT_LABEL)) +
+      geom_point(alpha = 0.45, size = 1.8) +
+      geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+      scale_color_manual(values = c("Placebo" = "gold", "Digoxin" = "brown")) +
+      theme_minimal()+
+      labs(
+        x = "Patient Age (Years)",
+        y = y_label,
+        color = "Treatment Group"
+      )
   })
   output$table_dig <- renderDT({
     display_df <- dig_sub() |>
