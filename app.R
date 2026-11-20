@@ -88,13 +88,13 @@ nav_panel(
     card(
       card_header("What Is This Study About? (Plain-Language Guide)"),
       p(
-        "The ", strong("Digitalis Investigation Group (DIG) trail"),
+        "The ", strong("Digitalis Investigation Group (DIG) trial"),
         "was a large medical study testing a heart medication called ", strong("digoxin"),
-        "in people living with ", strong("heart failure"), ".Heart failure does not mean the heart has stopped working-it means the heart muscle is weaker or stiffer than usual and has to work harder to pump blood around the body."
+        "in people living with ", strong("heart failure"), ". Heart failure does not mean the heart has stopped working-it means the heart muscle is weaker or stiffer than usual and has to work harder to pump blood around the body."
       ),
       p(
         "To see whether digoxin genuinely helped patients, researchers randomly divided participants into two groups: one received ",
-        strong("digoxin"), " (an active medicine) and the other received a ", strong("digoxin"),
+        strong("digoxin"), " (an active medicine) and the other received a ", strong("placebo"),
         " (an inactive pill with no medicine). Neither the patients nor the doctors knew who got which pill during the study-this is called a ",
         strong("double-blind"), "trial, which helps prevent bias."
       )
@@ -138,7 +138,7 @@ nav_panel(
         ),
       tags$li(
         strong("Reading the Charts: "),
-        "The histogram shows how many patients fall in each age bracket,while the scatterplot lets you spot patterns between age and health measurements."
+        "The histogram shows how many patients fall in each age bracket, while the scatterplot lets you spot patterns between age and health measurements."
       )
     )
   )
@@ -181,7 +181,11 @@ layout_column_wrap(
       ),
       selected = "SYSBP"
     ),
-    plotOutput("plot_scatter")
+    plotOutput("plot_scatter"),
+    tags$div(
+      style = "padding: 8px 12px; background-color: rgba(0, 0, 0, 0, 03); border-radius: 6px; font-size: 0.88rem; margin-top: 6px;",
+      uiOutput("clinical_summary")
+    )
   )
   ),
   layout_column_wrap(
@@ -196,6 +200,11 @@ layout_column_wrap(
 
 #server
 server <- function(input, output, session) {
+  observeEvent(input$reset_filters, {
+  updateSelectInput(session, "filter_trt", selected = "All")
+  updateSelectInput(session, "filter_sex", selected = "All")
+  updateSliderInput(session, "filter_age", value = c(min(dig_data$AGE, na.rm = TRUE), max(dig_data$AGE, na.rm = TRUE)))
+})
   dig_sub <- reactive({
     data <- dig_data
     if(input$filter_trt !="All"){
@@ -218,7 +227,12 @@ server <- function(input, output, session) {
     ggplot(dig_sub(), aes(x = AGE, fill = TRTMT_LABEL)) +
       geom_histogram(bins = 25, color = "white", alpha = 0.85, position = "identity") +
       scale_fill_manual(values = c("Placebo" = "gold", "Digoxin" = "brown"))+
-      theme_minimal() +
+      theme_minimal(base_size = 12) +
+      theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        plot.margin = margin(10, 10, 10, 10)
+      ) +
       labs(x = "Patient Age (Years)", y = "Patient Count", fill = "Treatment Group")
   })
   
@@ -235,12 +249,37 @@ server <- function(input, output, session) {
       geom_point(alpha = 0.45, size = 1.8) +
       geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
       scale_color_manual(values = c("Placebo" = "gold", "Digoxin" = "brown")) +
-      theme_minimal()+
+      theme_minimal(base_size = 12) +
+      theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 8)),
+        plot.margin = margin(10, 10, 10, 10)
+      ) +
       labs(
         x = "Patient Age (Years)",
         y = y_label,
         color = "Treatment Group"
       )
+  })
+  output$clinical_summary <- renderUI({
+    data <- dig_sub()
+    total <- nrow(data)
+    y_col <- input$scatter_y
+    avg_val <- round(mean(data[[y_col]], na.rm = TRUE), 1)
+    label_name <- switch(
+      y_col,
+      "SYSBP" = "Mean Systolic BP",
+      "BMI" = "Mean BMI",
+      "EJF_PER" = "Mean Ejection Fraction"
+    )
+    unit_name <- switch(
+      y_col,
+      "SYSBP" = "mmHg",
+      "BMI" = "kg/m^2",
+      "EJF_PER" = "%"
+    )
+    HTML(paste0("<strong>Cohort Insight:</strong> Analyzing <strong>", format(total, big.mark = ","), "</strong> filtered patients. ", label_name, ": <strong>", avg_val, unit_name, "</strong>."))
   })
   output$table_dig <- renderDT({
     display_df <- dig_sub() |>
@@ -260,12 +299,14 @@ server <- function(input, output, session) {
        )
     datatable(
       display_df,
-      options = list(pageLength = 7, scrollX = TRUE, dom = 'tp'),
-      class = 'table-bordered table-striped table-hover'
-    )
-  })
+      extensions = 'Buttons',
+      options = list(pageLength = 7, scrollX = TRUE, dom = 'Bfrtip', buttons = c('csv', 'excel')
+      ),
+      class = 'table-bordered table-striped table-hover',
+      rownames = FALSE
+  )
+})
 }
-
 shinyApp(ui = ui, server = server)
 
 
