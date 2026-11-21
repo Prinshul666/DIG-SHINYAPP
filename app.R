@@ -23,7 +23,6 @@ dig_data <- dig_data |>
     DWHF_LABEL = factor(DWHF, levels = c(0,1), labels = c("No Event", "Death or HF Hosp"))
   )
 #Creating UI for app
-library(shiny)
 
 ui <- page_navbar(
   theme = bs_theme(version = 5,
@@ -63,9 +62,10 @@ ui <- page_navbar(
       padding-top: 4px !important;
       padding-bottom: 4px !important
     }
+   
+    
     }"))
   ),
-
   sidebar = sidebar(
     width = 300,
     input_dark_mode(id = "dark_mode", mode = "light"),
@@ -74,12 +74,12 @@ ui <- page_navbar(
     sliderInput(
       inputId = "filter_age", 
       label = "Select Age Range:",
-    min = min(dig_data$AGE, na.rm = TRUE),
-    max = max(dig_data$AGE, na.rm = TRUE),
-    value = c(min(dig_data$AGE, na.rm = TRUE),
-              max(dig_data$AGE, na.rm = TRUE))
-)
-),
+      min = min(dig_data$AGE, na.rm = TRUE),
+      max = max(dig_data$AGE, na.rm = TRUE),
+      value = c(min(dig_data$AGE, na.rm = TRUE),
+                max(dig_data$AGE, na.rm = TRUE))
+    )
+  ),
 #info page
 nav_panel(
   title = "Info & Background",
@@ -159,16 +159,14 @@ layout_column_wrap(
     title = "All Cause Mortality Events",
     value = textOutput("val_deaths"),
     showcase = icon("heart-pulse"),
-    theme = "teal"
-  )
+    theme = "teal")
 ),
 layout_column_wrap(
   width = 1/2,
   heights_equal = "row",
   card(
     card_header("Age Distribution"),
-    plotOutput("plot_age")
-  ),
+    plotOutput("plot_age")),
   card(
     card_header("Age vs. Health Measure (Scatter Plot)"),
     selectInput(
@@ -177,24 +175,21 @@ layout_column_wrap(
       choices = c(
         "Systolic Blood Pressure (mmHg)" = "SYSBP",
         "Body Mass Index (BMI)" = "BMI",
-        "Ejection Fraction (%)" = "EJF_PER"
-      ),
+        "Ejection Fraction (%)" = "EJF_PER"),
       selected = "SYSBP"
     ),
     plotOutput("plot_scatter"),
     tags$div(
-      style = "padding: 8px 12px; background-color: rgba(0, 0, 0, 0, 03); border-radius: 6px; font-size: 0.88rem; margin-top: 6px;",
-      uiOutput("clinical_summary")
+      style = "padding: 8px 12px; background-color: rgba(0, 0, 0, 0.03); border-radius: 6px; font-size: 0.88rem; margin-top: 6px;",
+      uiOutput("clinical_summary"))
     )
-  )
   ),
   layout_column_wrap(
     width = 1,
     card(
     card_header("Patient Record Table"),
-    DTOutput("table_dig")
-    )
-    )
+    DTOutput("table_dig"))
+  )
 )
 )
 
@@ -206,6 +201,7 @@ server <- function(input, output, session) {
   updateSliderInput(session, "filter_age", value = c(min(dig_data$AGE, na.rm = TRUE), max(dig_data$AGE, na.rm = TRUE)))
 })
   dig_sub <- reactive({
+    req(input$filter_trt, input$filter_sex, input$filter_age)
     data <- dig_data
     if(input$filter_trt !="All"){
       data <- data |> filter(TRTMT_LABEL == input$filter_trt)
@@ -237,6 +233,7 @@ server <- function(input, output, session) {
   })
   
   output$plot_scatter <- renderPlot({
+    req(input$scatter_y)
     y_col <- input$scatter_y
     y_label <- switch(
       y_col,
@@ -244,17 +241,19 @@ server <- function(input, output, session) {
       "BMI" = "Body Mass Index (BMI)",
       "EJF_PER" = "Ejection Fraction (%)"
     )
-  
-    ggplot(dig_sub(),aes(x = AGE, y = .data[[y_col]], color = TRTMT_LABEL)) +
+    plot_df <- dig_sub() |> 
+      filter(!is.na(AGE),!is.na(.data[[y_col]]))
+    
+    ggplot(plot_df,aes(x = AGE, y = .data[[y_col]], color = TRTMT_LABEL)) +
       geom_point(alpha = 0.45, size = 1.8) +
-      geom_smooth(method = "lm", se = FALSE, linewidth = 1) +
+      geom_smooth(method = "lm",formula = y ~ x, se = FALSE, linewidth = 1) +
       scale_color_manual(values = c("Placebo" = "gold", "Digoxin" = "brown")) +
       theme_minimal(base_size = 12) +
       theme(
         legend.position = "top",
         legend.title = element_blank(),
-        axis.title.y = element_text(margin = margin(r = 8)),
-        plot.margin = margin(10, 10, 10, 10)
+        axis.title.y = element_text(margin = margin(r = 6)),
+        plot.margin = margin(4, 6, 4, 6)
       ) +
       labs(
         x = "Patient Age (Years)",
