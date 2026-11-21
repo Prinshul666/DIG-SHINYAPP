@@ -78,7 +78,8 @@ ui <- page_navbar(
       max = max(dig_data$AGE, na.rm = TRUE),
       value = c(min(dig_data$AGE, na.rm = TRUE),
                 max(dig_data$AGE, na.rm = TRUE))
-    )
+    ),
+    actionButton("reset_filters", "Reset All Filters", class = "btn-outline-secondary btn-sm w-100 mt-2", icon = icon("rotate-left"))
   ),
 #info page
 nav_panel(
@@ -248,12 +249,12 @@ server <- function(input, output, session) {
       geom_point(alpha = 0.45, size = 1.8) +
       geom_smooth(method = "lm",formula = y ~ x, se = FALSE, linewidth = 1) +
       scale_color_manual(values = c("Placebo" = "gold", "Digoxin" = "brown")) +
-      theme_minimal(base_size = 12) +
+      theme_minimal(base_size = 11) +
       theme(
         legend.position = "top",
         legend.title = element_blank(),
-        axis.title.y = element_text(margin = margin(r = 6)),
-        plot.margin = margin(4, 6, 4, 6)
+        axis.title.y = element_text(margin = margin(r = 4)),
+        plot.margin = margin(2, 6, 4, 6)
       ) +
       labs(
         x = "Patient Age (Years)",
@@ -299,7 +300,10 @@ server <- function(input, output, session) {
     datatable(
       display_df,
       extensions = 'Buttons',
-      options = list(pageLength = 7, scrollX = TRUE, dom = 'Bfrtip', buttons = c('csv', 'excel')
+      options = list(pageLength = 7, scrollX = TRUE, dom = 'Bfrtip', buttons = list(
+        list(extend = 'csv', className = 'btn btn-sm btn-outline-primary me-1'),
+        list(extend = 'excel', className = 'btn btn-sm btn-outline-success')
+      )
       ),
       class = 'table-bordered table-striped table-hover',
       rownames = FALSE
