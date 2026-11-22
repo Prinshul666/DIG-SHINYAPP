@@ -25,6 +25,7 @@ dig_data <- dig_data |>
 #Creating UI for app
 
 ui <- page_navbar(
+  fillable = FALSE,
   theme = bs_theme(version = 5,
                    preset = "bootstrap",
                    base_font = font_google("Inter"),
@@ -166,8 +167,9 @@ layout_column_wrap(
   width = 1/2,
   heights_equal = "row",
   card(
+    min_height = "480px",
     card_header("Age Distribution"),
-    plotOutput("plot_age")),
+    plotOutput("plot_age", height = "360px")),
   card(
     card_header("Age vs. Health Measure (Scatter Plot)"),
     selectInput(
