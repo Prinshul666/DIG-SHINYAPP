@@ -217,6 +217,7 @@ padding-bottom: 4px !important;
       width = 1,
       card(
         card_header("Clinical History & Outcomes by Treatment Group"),
+        uiOutput("clinical_interpretation"),
         plotOutput("plot_comorbidities")
       )
     ),
@@ -270,6 +271,9 @@ server <- function(input, output, session) {
       theme(
         legend.position = "top",
         legend.title = element_blank(),
+        axis.title = element_text(face = "bold", size = 11),
+        axis.title.x = element_text(margin = margin(t = 6)),
+        axis.title.y = element_text(margin = margin(r = 6)),
         plot.margin = margin(2, 6, 4, 6)
       ) +
       labs(x = "Patient Age (Years)", y = "Patient Count", fill = "Treatment Group")
@@ -295,7 +299,9 @@ server <- function(input, output, session) {
       theme(
         legend.position = "top",
         legend.title = element_blank(),
-        axis.title.y = element_text(margin = margin(r = 4)),
+        axis.title = element_text(face = "bold", size = 11),
+        axis.title.x = element_text(margin = margin(t = 6)),
+        axis.title.y = element_text(margin = margin(r = 6)),
         plot.margin = margin(2, 6, 4, 6)) +
       labs(
         x = "Patient Age (Years)",
@@ -326,6 +332,55 @@ server <- function(input, output, session) {
                 label_name, ": <strong>", avg_val, unit_name, "</strong>."))
   })
   
+  output$clinical_interpretation <- renderUI({
+    req(input$filter_sex, input$filter_age)
+    base_df <- dig_data
+    if (input$filter_sex != "All") {
+      base_df <- base_df |> filter(SEX_LABEL == input$filter_sex)
+    }
+    base_df <- base_df |> filter(AGE >= input$filter_age[1] & AGE <= input$filter_age[2])
+    
+    req(nrow(base_df) > 0)
+    curr_df <- dig_sub()
+    
+    stats <- base_df |>
+      summarise(
+        mort_placebo = mean(DEATH[TRTMT_LABEL == "Placebo"] == 1, na.rm = TRUE) * 100,
+        mort_digoxin = mean(DEATH[TRTMT_LABEL == "Digoxin"] == 1, na.rm = TRUE) * 100,
+        hosp_placebo = mean(DWHF[TRTMT_LABEL == "Placebo"] == 1, na.rm = TRUE) * 100,
+        hosp_digoxin = mean(DWHF[TRTMT_LABEL == "Digoxin"] == 1, na.rm = TRUE) * 100
+      )
+  hosp_diff <- round(stats$hosp_placebo - stats$hosp_digoxin, 1)
+  mort_diff <- round(stats$mort_digoxin - stats$mort_placebo, 1)
+    
+  hosp_statement <- if(is.nan(hosp_diff) || is.na(hosp_diff)) {
+    "insufficient outcome data"
+  } else if (hosp_diff > 0) {
+    paste0("a <strong>", hosp_diff, "% reduction</strong> in heart failure hospitalizations/mortality compared to placebo")
+  } else if (hosp_diff < 0 ) {
+    paste0(" a <strong>", abs(hosp_diff), "% increase</strong> in heart failure hospitalizations/mortality compared to placebo")
+  } else {
+    "similar rates of heart failure hospitalizations comapared to placebo"
+  }
+  mort_statement <- if (is.nan(mort_diff) || is.na(mort_diff)) {
+    "mortality outcome data is pending"
+  } else if(abs(mort_diff) < 0.5) {
+    "all cause mortality remain neutral between treatment groups"
+  } else if (mort_diff < 0) {
+    paste0("all cause mortality is <strong>", abs(mort_diff), "% lower</strong> in the digoxin arm")
+  } else {
+    paste0("all cause mortality is <strong>", mort_diff, "% higher</strong> in the digoxin arm")
+  }
+  
+  HTML(paste0(
+    "<div style = 'background-color: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; margin: 8px 0 16px; border-radius: 4px; font-size: 0.93rem; color: #212529;'>",
+    "<strong> Clinical Interpretation (Filtered Cohort, n = ", format(nrow(curr_df), big.mark = ","), "):</strong>",
+    "In this sub cohort, digoxin therapy demonstrates ", hosp_statement, ", while ", mort_statement, ".",
+    "Baseline comorbidity rates above reflect pre-existing risk profiles across trial arms.",
+    "</div>"
+  ))
+})
+  
   output$plot_comorbidities <- renderPlot({
     summary_df <- dig_sub() |>
       summarise(
@@ -349,6 +404,9 @@ server <- function(input, output, session) {
       theme(
         legend.position = "top",
         legend.title = element_blank(),
+        axis.title = element_text(face = "bold", size = 11),
+        axis.title.x = element_text(margin = margin(t = 6)),
+        axis.title.y = element_text(margin = margin(r = 6)),
         plot.margin = margin(2, 6, 4, 6)
       ) +
       labs(
