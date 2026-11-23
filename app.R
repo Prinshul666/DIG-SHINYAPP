@@ -5,8 +5,6 @@ library(DT)
 library(bslib)
 library(thematic)
 
-
-
 thematic_shiny(font = font_spec("Inter",scale = 1.0))
 
 dig_data <- read.csv("DIG.csv")
@@ -214,7 +212,14 @@ padding-bottom: 4px !important;
         )
       )
     ),
-    
+    #Comorbidity and Outcome chart
+    layout_column_wrap(
+      width = 1,
+      card(
+        card_header("Clinical History & Outcomes by Treatment Group"),
+        plotOutput("plot_comorbidities")
+      )
+    ),
     # Patient records
     layout_column_wrap(
       width = 1,
@@ -320,6 +325,38 @@ server <- function(input, output, session) {
                 format(total, big.mark = ","), "</strong> filtered patients. ", 
                 label_name, ": <strong>", avg_val, unit_name, "</strong>."))
   })
+  
+  output$plot_comorbidities <- renderPlot({
+    summary_df <- dig_sub() |>
+      summarise(
+        Hypertension = mean(HYPERTEN == 1, na.rm = TRUE) * 100,
+        Diabetes = mean(DIABETES == 1, na.rm = TRUE) * 100,
+        `Prior Heart Attack` = mean(PREVMI == 1, na.rm = TRUE) * 100,
+        `Mortality (DEATH)` = mean(DEATH == 1, na.rm = TRUE) * 100,
+        `Death or HF Hosp` = mean(DWHF == 1, na.rm = TRUE) * 100,
+        .by = TRTMT_LABEL
+      ) |>
+      pivot_longer(
+        cols = -TRTMT_LABEL,
+        names_to = "Measure",
+        values_to = "Percent"
+      )
+    
+    ggplot(summary_df, aes(x = Percent, y = reorder(Measure, Percent), fill = TRTMT_LABEL)) +
+      geom_col(position = "dodge", width = 0.65, alpha = 0.9) +
+      scale_fill_manual(values = c("Placebo" = "gold", "Digoxin" = "brown")) +
+      theme_minimal(base_size = 12) +
+      theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        plot.margin = margin(2, 6, 4, 6)
+      ) +
+      labs(
+        x = "Share of Filtered Patients (%)",
+        y = NULL
+      )
+  })
+  
   
   output$table_dig <- renderDT({
     display_df <- dig_sub() |>
