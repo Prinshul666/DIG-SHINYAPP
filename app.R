@@ -11,7 +11,7 @@ dig_data <- read.csv("DIG.csv")
 
 dig_data <- dig_data |>
   
-  select(ID, TRTMT, AGE, SEX, RACE, BMI, SYSBP, DIABP, HEARTRTE, KLEVEL, CREAT, EJF_PER, HYPERTEN, DIABETES, PREVMI, DEATH, DWHF) |>
+  select(ID, TRTMT, AGE, SEX, RACE, BMI, SYSBP, DIABP, HEARTRTE, KLEVEL, CREAT, EJF_PER, HYPERTEN, DIABETES, PREVMI, ANGINA, DIGUSE, WHF, HOSP, DEATH, DWHF) |>
   
   mutate(
     TRTMT_LABEL = factor(TRTMT, levels = c(0,1), labels = c("Placebo", "Digoxin")),
@@ -20,10 +20,15 @@ dig_data <- dig_data |>
     HYPERTEN_LABEL = factor(HYPERTEN, levels = c(0,1), labels = c("No", "Yes")),
     DIABETES_LABEL = factor(DIABETES, levels = c(0,1), labels = c("No", "Yes")),
     PREVMI_LABEL = factor(PREVMI, levels = c(0,1), labels = c("No", "Yes")),
+    ANGINA_LABEL = if ("ANGINA" %in% names(dig_data)) factor (ANGINA, levels = c(0,1), labels = c("No", "Yes")) else NULL,
+    DIGUSE_LABEL = if ("DIGUSE" %in% names(dig_data)) factor (DIGUSE, levels = c(0,1), labels = c("No", "Yes")) else NULL,
     DEATH_LABEL = factor(DEATH, levels = c(0,1), labels = c("Alive", "Death")),
-    DWHF_LABEL = factor(DWHF, levels = c(0,1), labels = c("No Event", "Death or HF Hosp"))
+    DWHF_LABEL = factor(DWHF, levels = c(0,1), labels = c("No Event", "Death or HF Hosp")),
+    WHF_LABEL = if ("WHF" %in% names(dig_data)) factor(WHF, levels = c(0,1), labels = c("No Hosp", "HF Hosp")) else NULL,
+    HOSP_LABEL = if("HOSP" %in% names(dig_data)) factor(HOSP, levels =c(0,1), labels = c("No Hosp", "Any Hosp")) else NULL
   )
-
+col_placebo <- "brown"
+col_digoxin <- "gold"
 #Creating UI for app
 
 ui <- page_navbar(
@@ -31,7 +36,9 @@ ui <- page_navbar(
   theme = bs_theme(version = 5,
                    preset = "bootstrap",
                    base_font = font_google("Inter"),
-                   heading_font = font_google("Montserrat")
+                   heading_font = font_google("Montserrat"),
+                   primary = "#1E3A8A",
+                   secondary = "#475569"
   ),
   
   title = "Dig Trial Dashboard",
@@ -39,9 +46,10 @@ ui <- page_navbar(
     tags$style(HTML("
 .navbar{
 position: relative !important;
-min-height: 46px !important;
-padding-top: 4px !important;
-padding-bottom: 4px !important;
+min-height: 52px !important;
+padding-top: 6px !important;
+padding-bottom: 6px !important;
+box-shadow: 0 2px 4px rgba(0,0,0,0,0.04);
 }
 
 .navbar .container-fluid {
@@ -64,15 +72,36 @@ padding: 4px 16px !important;
 border-radius: 999px
 }
 
-.navbar-nav .nav-link{
-padding-top: 4px !important;
-padding-bottom: 4px !important;
+.card{
+border-radius: 10px !important;
+border: 1px solid #E2E8FO !important;
+box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0 , 0, 0.02) !important;
+transition: transform 0.15s ease;
+}
+
+.card{
+border-radius: 10px !important;
+border: 1px solid #E2E8F0 !important;
+box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+}
+.card-header{
+background-color: #FFFFFF !important;
+border-bottom: 1px solid #F1F5F9 !important;
+font-weight: 700 !important;
+font-size: 1.02rem !important;
+color: #0F172A !important;
+padding: 14px 18px !important;
+}
+.sidebar {
+background-color :#F8FAFC !important;
+border-right: 1px solid #E2E8F0 !important;
 }
 }"))
   ),
   
   sidebar = sidebar(
     width = 300,
+    title = h5("Cohort Filters", class = "fw-bold text-dark mb-3"),
     input_dark_mode(id = "dark_mode", mode = "light"),
     selectInput("filter_trt", "Select Treatment Group:", choices = c("All", "Placebo", "Digoxin")),
     selectInput("filter_sex", "Select Patient Sex:", choices = c("All", "Male", "Female")),
@@ -141,19 +170,11 @@ padding-bottom: 4px !important;
         card_header("Trial Snapshot & How to Use This Dashboard"),
         tags$ul(
           tags$li(strong("Total Participants: "), "6,800 patients enrolled across multiple clinical centers."),
-          tags$li(strong("Medical Conditions Tracked: "), "High blood pressure (Hypertension), Diabetes, and prior heart attack (Prior MI)."),
-          tags$li(
-            strong("Using the Filters: "),
-            "Use the left sidebar to narrow patients by treatment group, sex, or age range. The summary cards, charts, and table automatically update to show only that matching group."
-          ),
-          tags$li(
-            strong("Reading the Charts: "),
-            "The histogram shows how many patients fall in each age bracket, while the scatterplot lets you spot patterns between age and health measurements."
+          tags$li(strong("Explore Dataset: "), "Select any variable below.")
           )
         )
       )
-    )
-  ),
+    ),
   
   # Main dashboard
   
@@ -209,6 +230,63 @@ padding-bottom: 4px !important;
         tags$div(
           style = "padding: 8px 12px; background-color: rgba(0, 0, 0, 0.03); border-radius: 6px; font-size: 0.88rem; margin-top: 6px;",
           uiOutput("clinical_summary")
+        )
+      )
+    ),
+    
+    layout_column_wrap(
+      width = 1,
+      card(
+        card_header("Dataset Explorer (Choose the option)"),
+        layout_sidebar(
+          sidebar = sidebar(
+            width = 310,
+            selectInput(
+              inputId = "smart_y",
+              label = "Primary Metric (Y-Axis):",
+              choices = list(
+                "Demographics & Physical" = c(
+                  "Age (Years)" = "AGE",
+                  "Systolic BP (mmHg)" = "SYSBP",
+                  "Diastolic BP (mmHg)" = "DIABP",
+                  "Body Mass Index (BMI)" = "BMI",
+                  "Heart Rate (bpm)" = "HEARTRTE"
+                ),
+                "Lab & Clinical Measurements" = c(
+                  "Ejection Fraction (%)" = "EJF_PER",
+                  "Serum Potassium (KLEVEL)" = "KLEVEL",
+                  "Serum Creatinine (CREAT)" = "CREAT"
+                ),
+                "Baseline Medical Conditions" = c(
+                  "Hypertension Flag" = "HYPERTEN_LABEL",
+                  "Diabetes Flag" = "DIABETES_LABEL",
+                  "Prior MI Flag" = "PREVMI_LABEL"
+                ),
+                "Trial Endpoints" = c(
+                  "All-Cause Mortality" = "DEATH_LABEL",
+                  "Death or HF Hospitalization" = "DWHF_LABEL"
+                )
+              ),
+              selected = "SYSBP"
+            ),
+            selectInput(
+              inputId = "smart_x",
+              label = "Compare Against (Grouping/ X-Axis):",
+              choices = c(
+                "Treatment Group" = "TRTMT_LABEL",
+                "Patient Sex" = "SEX_LABEL",
+                "Race" = "RACE_LABEL",
+                "Patient Age (Years)" = "AGE",
+                "Body Mass Index (BMI)" = "BMI"
+              ),
+              selected = "TRTMT_LABEL"
+            ),
+            tags$div(
+              style = "font-size: 0.82rem; color: #64748B; margin-top: 8px;",
+              "Automatically routes continous variables to scatter plots/boxplots and categorical pairs to bar charts."
+            )
+          ),
+          plotOutput("plot_smart_explorer", height = "390px")
         )
       )
     ),
@@ -330,6 +408,60 @@ server <- function(input, output, session) {
     HTML(paste0("<strong>Cohort Insight:</strong> Analyzing <strong>",
                 format(total, big.mark = ","), "</strong> filtered patients. ", 
                 label_name, ": <strong>", avg_val, unit_name, "</strong>."))
+  })
+  output$plot_smart_explorer <- renderPlot({
+    req(input$smart_y, input$smart_x)
+    df <- dig_sub()
+    req(nrow(df) > 0)
+    y_var <- input$smart_y
+    x_var <- input$smart_x
+    plot_data <- df |> filter(!is.na(.data[[y_var]]), !is.na(.data[[x_var]]))
+    req(nrow(plot_data) > 0)
+    y_is_num <- is.numeric(plot_data[[y_var]])
+    x_is_num <- is.numeric(plot_data[[x_var]])
+    if (y_is_num && x_is_num) {
+      #scatter plot for continous vs continous 
+      ggplot(plot_data, aes(x = .data[[x_var]], y = .data[[y_var]], color = TRTMT_LABEL)) +
+        geom_point(alpha = 0.45, size = 1.8) +
+        geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth =1.2) +
+        scale_color_manual(values = c("Placebo" = col_placebo, "Digoxin" = col_digoxin)) +
+        theme_minimal(base_size = 12) +
+        theme(
+          legend.position = "top", legend.title = element_blank(),
+          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          plot.margin = margin(6, 12, 6 ,12)
+        ) +
+        labs(x = x_var, y = y_var, color = "Treatment Group")
+      
+    } else if(y_is_num && !x_is_num) {
+      #jitter boxplot for continous y vs categorical x
+      ggplot(plot_data, aes(x = .data[[x_var]], y = .data[[y_var]], fill = .data[[x_var]])) +
+        geom_boxplot(alpha = 0.70, outlier.shape = NA, width = 0.45) +
+        geom_jitter(width = 0.15, alpha = 0.20, size = 1.2, color = "#1E293B") +
+        scale_fill_manual(values = c("Placebo" = col_placebo, "Digoxin" = col_digoxin, "Male" = "#2563EB", "Female" = "#DB2777", "White" = "#0D9488", "Non-white" = "#D97706")) +
+        theme_minimal(base_size = 12) +
+        theme(
+          legend.position = "none",
+          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          plot.margin = margin(6, 12, 6 ,12)
+        ) +
+        labs(x = x_var, y = y_var)
+      
+    } else { #grouped bar chart for categorical y vs catergorical x
+      prop_df <- plot_data |> mutate(X_FACTOR = as.factor(.data[[x_var]]))
+      prop_df <- plot_data |>
+        count(.data[[x_var]], .data[[y_var]]) |>
+        mutate(Percent = n / sum(n) * 100, .by = .data[[x_var]])
+      ggplot(prop_df, aes(x = .data[[x_var]], y = Percent, fill = .data[[y_var]])) +
+        geom_col(position = "dodge", alpha = 0.88, width = 0.55) +
+        theme_minimal(base_size = 12) +
+        theme(
+          legend.position = "top",
+          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          plot.margin = margin(6, 12, 6 ,12)
+        ) +
+        labs(x = x_var, y = "Share of Group (%)", fill = y_var)
+    }
   })
   
   output$clinical_interpretation <- renderUI({
