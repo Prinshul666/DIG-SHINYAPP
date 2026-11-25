@@ -27,6 +27,7 @@ dig_data <- dig_data |>
     RACE_LABEL = factor(RACE, levels = c(1,2), labels = c("White", "Non-white")),
     HYPERTEN_LABEL = factor(HYPERTEN, levels = c(0,1), labels = c("No", "Yes")),
     DIABETES_LABEL = factor(DIABETES, levels = c(0,1), labels = c("No", "Yes")),
+    PREVMI_LABEL = if ("PREVMI" %in% names(pick(everything()))) factor(PREVMI, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
     ANGINA_LABEL = if ("ANGINA" %in% names(dig_data)) factor(ANGINA, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
     DIGUSE_LABEL = if ("DIGUSE" %in% names(dig_data)) factor(DIGUSE, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
     DEATH_LABEL = factor(DEATH, levels = c(0,1), labels = c("Alive", "Death")),
@@ -214,9 +215,18 @@ border-right: 1px solid #E2E8F0  !important;
       card(
         card_header("Trial Snapshot & How to Use This Dashboard"),
         tags$ul(
+          tags$li(strong("Study Design: "), "Randomized, double-blind trial comparing digoxin against placebo in patients with heart failure."),
           tags$li(strong("Total Participants: "), "6,800 patients enrolled across multiple clinical centers."),
           tags$li(strong("Medical Conditions & Vitals Tracked: "), "Hypertension, Diabetes, Prior MI, Current Angina, NYHA Class, CHF Duration, Chest X-Ray CT-Ratio, Symptom Sum, Potassium, and Creatinine."),
-          tags$li(strong("Explore Dataset: "), "Select any variable below.")
+          tags$li(strong("Color Key: "),"Digoxin is shown in the brown and Placebo in gold across trial charts."),
+          tags$li(strong("Explore Dataset: "), "Open the ", 
+                  strong("Dashboard"), 
+                  " tab (via the top-left menu on smaller windows) to filter patients by treatment, sex, or age, compare custom variables in ",
+                  strong("Dataset Explorer"), ", review rates in ", 
+                  strong("Comorbidities & Outcomes"), ", and search or export data in ", 
+                  strong("Patient Records"), "."
+          ),
+          tags$li(strong("Data Note: "), "Missing records are excluded per variable, and narrow filter combinations can produce small sub-cohorts.")
           )
         )
       )
@@ -284,6 +294,19 @@ border-right: 1px solid #E2E8F0  !important;
       )
     )
     ),
+    #Comorbidity and Outcome chart
+    nav_panel(
+      title = "Comorbidities and Outcomes",
+      icon = icon("notes-medical"),
+      card(
+        card_header("Clinical History & Outcomes by Treatment Group"),
+        card_body(
+          uiOutput("clinical_interpretation"),
+          plotOutput("plot_comorbidities",height = "320px", fill = FALSE)
+        )
+      )
+    ),
+    
     # Dropdown Plots
     nav_panel(
       title = "Dataset Explorer",
@@ -351,22 +374,20 @@ border-right: 1px solid #E2E8F0  !important;
         )
           )
       )
-    )
     ),
-    #Comorbidity and Outcome chart
+   
+    # Patient records
     nav_panel(
-      title = "Outcomes & Data Table",
+      title = "Patient Records",
       icon = icon("table"),
       card(
-        card_header("Clinical History & Outcomes by Treatment Group"),
-        uiOutput("clinical_interpretation"),
-        plotOutput("plot_comorbidities",height = "320px", fill = FALSE)
-    ),
-      card(
-        class = "mt-3",
         card_header("Patient Record Table"),
-        DTOutput("table_dig")
+        card_body(
+          DTOutput("table_dig") 
+        )
       )
+    )
+     
     )
   )
 )
@@ -686,7 +707,7 @@ server <- function(input, output, session) {
       display_df,
       extensions = 'Buttons',
       options = list(pageLength = 7, scrollX = TRUE, dom = 'Bfrtip', buttons = list(
-        list(extend = 'csv', className = 'btn btn-sm btn-outline-primary me-1'),
+        list(extend = 'csv', className = 'btn btn-sm btn-outline-info me-1'),
         list(extend = 'excel', className = 'btn btn-sm btn-outline-success')
       )
       ),
