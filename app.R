@@ -356,14 +356,14 @@ border-right: 1px solid #E2E8F0  !important;
     #Comorbidity and Outcome chart
     nav_panel(
       title = "Outcomes & Data Table",
-      icon = icon("table_list"),
+      icon = icon("table"),
       card(
         card_header("Clinical History & Outcomes by Treatment Group"),
         uiOutput("clinical_interpretation"),
         plotOutput("plot_comorbidities",height = "320px", fill = FALSE)
     ),
       card(
-        class = "nt-3",
+        class = "mt-3",
         card_header("Patient Record Table"),
         DTOutput("table_dig")
       )
@@ -494,7 +494,7 @@ server <- function(input, output, session) {
           axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
-        labs(x = x_var, y = y_var, color = "Treatment Group")
+        labs(x = x_lab_name, y = y_lab_name, color = "Treatment Group")
       
     } else if(y_is_num && !x_is_num) {
       #jitter boxplot for continous y vs categorical x
@@ -573,7 +573,7 @@ server <- function(input, output, session) {
           axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
-        labs(x = x_var, y = "Share of Group (%)", fill = y_var)
+        labs(x = x_lab_name, y = "Share of Group (%)", fill = y_lab_name)
     }
   })
   
