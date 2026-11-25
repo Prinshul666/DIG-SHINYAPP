@@ -27,14 +27,13 @@ dig_data <- dig_data |>
     RACE_LABEL = factor(RACE, levels = c(1,2), labels = c("White", "Non-white")),
     HYPERTEN_LABEL = factor(HYPERTEN, levels = c(0,1), labels = c("No", "Yes")),
     DIABETES_LABEL = factor(DIABETES, levels = c(0,1), labels = c("No", "Yes")),
-    ANGINA_LABEL = if ("ANGINA" %in% names(pick(everything()))) factor(ANGINA, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
-    DIGUSE_LABEL = if ("DIGUSE" %in% names(pick(everything()))) factor(DIGUSE, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
-    DIGUSE_LABEL = factor (DIGUSE, levels = c(0,1), labels = c("No", "Yes")),
+    ANGINA_LABEL = if ("ANGINA" %in% names(dig_data)) factor(ANGINA, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
+    DIGUSE_LABEL = if ("DIGUSE" %in% names(dig_data)) factor(DIGUSE, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
     DEATH_LABEL = factor(DEATH, levels = c(0,1), labels = c("Alive", "Death")),
     DWHF_LABEL = factor(DWHF, levels = c(0,1), labels = c("No Event", "Death or HF Hosp")),
-    WHF_LABEL = if ("WHF" %in% names(pick(everything()))) factor(WHF, levels = c(0, 1), labels = c("No Hosp", "HF Hosp")) else NULL,
-    HOSP_LABEL = if ("HOSP" %in% names(pick(everything()))) factor(HOSP, levels = c(0, 1), labels = c("No Hosp", "Any Hosp")) else NULL,
-    FUNCTCLS_LABEL = if ("FUNCTCLS" %in% names(pick(everything())))factor(FUNCTCLS, levels = c(1, 2, 3, 4), labels = c("Class I", "Class II", "Class III", "Class IV")) else NULL
+    WHF_LABEL = if ("WHF" %in% names(dig_data)) factor(WHF, levels = c(0, 1), labels = c("No Hosp", "HF Hosp")) else NULL,
+    HOSP_LABEL = if ("HOSP" %in% names(dig_data)) factor(HOSP, levels = c(0, 1), labels = c("No Hosp", "Any Hosp")) else NULL,
+    FUNCTCLS_LABEL = if ("FUNCTCLS" %in% names(dig_data)) factor(FUNCTCLS, levels = c(1, 2, 3, 4), labels = c("Class I", "Class II", "Class III", "Class IV")) else NULL
   )
 col_placebo <- "brown"
 col_digoxin <- "gold"
@@ -64,19 +63,19 @@ var_labels <- c(
   WHF_LABEL = "Worsening HF Hospitalization (WHF)",
   HOSP_LABEL = "Any Hospitalization (HOSP)"
 )
-get_var_label <- function(x){
-  if(!is.null(x) && x %in% names(var_labels)) unname(var_labels[[x]]) else x
+get_var_label <- function(x) {
+  if (!is.null(x) && x %in% names(var_labels)) unname(var_labels[[x]]) else x
 }
 #Creating UI for app
-
-ui <- page_navbar(
+ui <- page_navbar (
   fillable = FALSE,
-  theme = bs_theme(version = 5,
-                   preset = "bootstrap",
-                   base_font = font_google("Inter"),
-                   heading_font = font_google("Montserrat"),
-                   primary = "navy",
-                   secondary = "slategrey"
+  theme = bs_theme(
+    version = 5,
+    preset = "bootstrap",
+    base_font = font_google("Inter"),
+    heading_font = font_google("Montserrat"),
+    primary = "navy",
+    secondary = "slategrey"
   ),
   
   title = "Dig Trial Dashboard",
@@ -134,7 +133,7 @@ padding: 14px 18px !important;
 
 border-right: 1px solid #E2E8F0  !important;
 }
-}"))
+"))
   ),
   
   sidebar = sidebar(
@@ -151,60 +150,10 @@ border-right: 1px solid #E2E8F0  !important;
       value = c(min(dig_data$AGE, na.rm = TRUE),
                 max(dig_data$AGE, na.rm = TRUE))
     ),
-    tags$hr(class = "my-2"),
-    h6("Dataset Explorer Axes", class = "fw-bold mb-2"),
-    selectInput(
-      inputId = "smart_y",
-      label = "Primary Metric (Y-Axis):",
-      choices = list(
-        "Demographics & Physical" = c(
-          "Age (Years)" = "AGE",
-          "Systolic BP (mmHg)" = "SYSBP",
-          "Diastolic BP (mmHg)" = "DIABP",
-          "Body Mass Index (BMI)" = "BMI",
-          "Heart Rate (bpm)" = "HEARTRTE",
-          "CHF Duration (Months)" = "CHFDUR",
-          "Chest X-Ray CT-Ratio" = "CHESTX",
-          "Symptom Sum (NSYM)" = "NSYM"
-        ),
-        "Lab & Clinical Measurements" = c(
-          "Ejection Fraction (%)" = "EJF_PER",
-          "Serum Potassium (KLEVEL)" = "KLEVEL",
-          "Serum Creatinine (CREAT)" = "CREAT"
-        ),
-        "Baseline Medical Conditions" = c(
-          "NYHA Functional Class" = "FUNCTCLS_LABEL",
-          "Hypertension Flag" = "HYPERTEN_LABEL",
-          "Diabetes Flag" = "DIABETES_LABEL",
-          "Prior MI Flag" = "PREVMI_LABEL",
-          "Current Angina Flag" = "ANGINA_LABEL"
-        ),
-        "Trial Endpoints" = c(
-          "All-Cause Mortality" = "DEATH_LABEL",
-          "Primary Endpt: Death or HF Hosp (DWHF)" = "DWHF_LABEL",
-          "Worsening HF Hosp (WHF)" = "WHF_LABEL",
-          "Any Hospitalization (HOSP)" = "HOSP_LABEL"
-        )
-      ),
-      selected = "SYSBP"
-    ),
-    selectInput(
-      inputId = "smart_x",
-      label = "Compare Against (Grouping / X-Axis):",
-      choices = c(
-        "Treatment Group" = "TRTMT_LABEL",
-        "Patient Sex" = "SEX_LABEL",
-        "Race" = "RACE_LABEL",
-        "NYHA Functional Class" = "FUNCTCLS_LABEL",
-        "Patient Age (Years)" = "AGE",
-        "Body Mass Index (BMI)" = "BMI"
-      ),
-      selected = "TRTMT_LABEL"
-    ),
     actionButton("reset_filters", "Reset All Filters", class = "btn-outline-secondary btn-sm w-100 mt-2", icon = icon("rotate-left"))
   ),
   
-  #info page
+ #info page
   
   nav_panel(
     title = "Info & Background",
@@ -281,7 +230,7 @@ border-right: 1px solid #E2E8F0  !important;
     # Dashboard summary boxes
     layout_column_wrap(
       width = 1/2,
-      
+      class = "mb-3",
       value_box(
         title = "Filtered Patients",
         value = textOutput("val_total"),
@@ -299,7 +248,11 @@ border-right: 1px solid #E2E8F0  !important;
       )
     ),
     
-    # Dashboard charts
+    navset_card_tab(
+      id = "dashboard_subtabs",
+      nav_panel(
+        title = "Overview & Demographics",
+        icon = icon("chart-pie"),
     layout_column_wrap(
       width = 1/2,
       heights_equal = "row",
@@ -329,39 +282,95 @@ border-right: 1px solid #E2E8F0  !important;
           uiOutput("clinical_summary")
         )
       )
+    )
     ),
     # Dropdown Plots
-    layout_column_wrap(
-      width = 1,
+    nav_panel(
+      title = "Dataset Explorer",
+      icon = icon("sliders"),
       card(
         card_header("Dataset Explorer"),
+        card_body(
+          layout_column_wrap(
+            width = 1/2,
+          selectInput(
+            inputId = "smart_y",
+            label = "Primary Metric (Y-Axis):",
+            choices = list(
+              "Demographics & Physical" = c(
+                "Age (Years)" = "AGE",
+                "Systolic BP (mmHg)" = "SYSBP",
+                "Diastolic BP (mmHg)" = "DIABP",
+                "Body Mass Index (BMI)" = "BMI",
+                "Heart Rate (bpm)" = "HEARTRTE",
+                "CHF Duration (Months)" = "CHFDUR",
+                "Chest X-Ray CT-Ratio" = "CHESTX",
+                "Symptom Sum (NSYM)" = "NSYM"
+              ),
+              "Lab & Clinical Measurements" = c(
+                "Ejection Fraction (%)" = "EJF_PER",
+                "Serum Potassium (KLEVEL)" = "KLEVEL",
+                "Serum Creatinine (CREAT)" = "CREAT"
+              ),
+              "Baseline Medical Conditions" = c(
+                "NYHA Functional Class" = "FUNCTCLS_LABEL",
+                "Hypertension Flag" = "HYPERTEN_LABEL",
+                "Diabetes Flag" = "DIABETES_LABEL",
+                "Prior MI Flag" = "PREVMI_LABEL",
+                "Current Angina Flag" = "ANGINA_LABEL"
+              ),
+              "Trial Endpoints" = c(
+                "All-Cause Mortality" = "DEATH_LABEL",
+                "Primary Endpt: Death or HF Hosp (DWHF)" = "DWHF_LABEL",
+                "Worsening HF Hosp (WHF)" = "WHF_LABEL",
+                "Any Hospitalization (HOSP)" = "HOSP_LABEL"
+              )
+            ),
+            selected = "SYSBP",
+            width = "100%"
+          ),
+          selectInput(
+            inputId = "smart_x",
+            label = "Compare Against (Grouping / X-Axis):",
+            choices = c(
+              "Treatment Group" = "TRTMT_LABEL",
+              "Patient Sex" = "SEX_LABEL",
+              "Race" = "RACE_LABEL",
+              "NYHA Functional Class" = "FUNCTCLS_LABEL",
+              "Patient Age (Years)" = "AGE",
+              "Body Mass Index (BMI)" = "BMI"
+            ),
+            selected = "TRTMT_LABEL",
+            width = "100%"
+          )
+          ),
         plotOutput("plot_smart_explorer", height = "390px",fill = FALSE),
         tags$div(
           style = "font-size: 0.82rem; color: #64748B; margin-top: 8px;",
           "Automatically routes continous variables to scatter plots/boxplots and categorical pairs to bar charts."
         )
           )
+      )
+    )
     ),
     #Comorbidity and Outcome chart
-    layout_column_wrap(
-      width = 1,
+    nav_panel(
+      title = "Outcomes & Data Table",
+      icon = icon("table_list"),
       card(
         card_header("Clinical History & Outcomes by Treatment Group"),
         uiOutput("clinical_interpretation"),
         plotOutput("plot_comorbidities",height = "320px", fill = FALSE)
-      )
     ),
-    # Patient records
-    layout_column_wrap(
-      width = 1,
-      
       card(
+        class = "nt-3",
         card_header("Patient Record Table"),
         DTOutput("table_dig")
       )
     )
   )
 )
+
 
 #server
 
@@ -467,6 +476,8 @@ server <- function(input, output, session) {
     req(nrow(df) > 0)
     y_var <- input$smart_y
     x_var <- input$smart_x
+    y_lab_name <- get_var_label(y_var)
+    x_lab_name <- get_var_label(x_var)
     plot_data <- df |> filter(!is.na(.data[[y_var]]), !is.na(.data[[x_var]]))
     req(nrow(plot_data) > 0)
     y_is_num <- is.numeric(plot_data[[y_var]])
@@ -510,7 +521,32 @@ server <- function(input, output, session) {
           axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
-        labs(x = x_var, y = y_var)
+        labs(x = x_lab_name, y = y_lab_name)
+    } else if (!y_is_num && x_is_num) {
+      
+      ggplot(plot_data, aes(x = .data[[y_var]], y = .data[[x_var]], fill = .data[[y_var]])) +
+        geom_boxplot(alpha = 0.70, outlier.shape = NA, width = 0.45) +
+        geom_jitter(height = 0.15, alpha = 0.20, size = 1.2, color = "grey30") +
+        scale_fill_manual(
+          values = c(
+            "No" = "#64748B", "Yes" = "#8C1D40",
+            "Alive" = col_placebo, "Death" = col_digoxin,
+            "No Hosp" = "#0D9488", "Any Hosp" = "#D97706",
+            "No Event" = "#0D9488", "Death or HF Hosp" = "#8C1D40",
+            "Class I" = "forestgreen",
+            "Class II" = "darkblue",
+            "Class III" = "darkorange2",
+            "Class IV" = "firebrick"
+          )
+        )+
+        theme_minimal(base_size = 12) +
+        theme(
+          legend.position = "none",
+          axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
+          plot.margin = margin(6, 12, 6 ,12)
+        ) +
+        labs(x = x_lab_name, y = y_lab_name) +
+        coord_flip()
       
     } else { #grouped bar chart for categorical y vs catergorical x
       prop_df <- plot_data |> mutate(X_FACTOR = as.factor(.data[[x_var]]))
@@ -519,6 +555,18 @@ server <- function(input, output, session) {
         mutate(Percent = n / sum(n) * 100, .by = .data[[x_var]])
       ggplot(prop_df, aes(x = .data[[x_var]], y = Percent, fill = .data[[y_var]])) +
         geom_col(position = "dodge", alpha = 0.88, width = 0.55) +
+        scale_fill_manual(
+          values = c(
+            "No" = "#64748B", "Yes" = "#8C1D40",
+            "Alive" = col_placebo, "Death" = col_digoxin,
+            "No Hosp" = "#0D9488", "Any Hosp" = "#D97706",
+            "No Event" = "#0D9488", "Death or HF Hosp" = "#8C1D40",
+            "Class I" = "forestgreen",
+            "Class II" = "darkblue",
+            "Class III" = "darkorange2",
+            "Class IV" = "firebrick"
+        )
+        ) +
         theme_minimal(base_size = 12) +
         theme(
           legend.position = "top",
@@ -579,6 +627,7 @@ server <- function(input, output, session) {
 })
   
   output$plot_comorbidities <- renderPlot({
+    req(nrow(dig_sub()) > 0)
     summary_df <- dig_sub() |>
       summarise(
         `Hypertension (HYPERTEN)` = mean(HYPERTEN == 1, na.rm = TRUE) * 100,
