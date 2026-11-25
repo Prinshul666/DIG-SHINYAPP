@@ -11,7 +11,15 @@ dig_data <- read.csv("DIG.csv")
 
 dig_data <- dig_data |>
   
-  select(ID, TRTMT, AGE, SEX, RACE, BMI, SYSBP, DIABP, HEARTRTE, KLEVEL, CREAT, EJF_PER, HYPERTEN, DIABETES, PREVMI, ANGINA, DIGUSE, WHF, HOSP, DEATH, DWHF) |>
+  select(
+    any_of(
+      c(
+        "ID", "TRTMT", "AGE", "SEX", "RACE", "BMI", "SYSBP", "DIABP", "HEARTRTE",
+        "KLEVEL", "CREAT", "EJF_PER", "CHESTX", "CHFDUR", "NSYM", "FUNCTCLS",
+        "HYPERTEN", "DIABETES", "PREVMI", "ANGINA", "DIGUSE", "WHF", "HOSP",
+        "DEATH", "DWHF"
+      )
+    )) |>
   
   mutate(
     TRTMT_LABEL = factor(TRTMT, levels = c(0,1), labels = c("Placebo", "Digoxin")),
@@ -19,16 +27,46 @@ dig_data <- dig_data |>
     RACE_LABEL = factor(RACE, levels = c(1,2), labels = c("White", "Non-white")),
     HYPERTEN_LABEL = factor(HYPERTEN, levels = c(0,1), labels = c("No", "Yes")),
     DIABETES_LABEL = factor(DIABETES, levels = c(0,1), labels = c("No", "Yes")),
-    PREVMI_LABEL = factor(PREVMI, levels = c(0,1), labels = c("No", "Yes")),
-    ANGINA_LABEL = if ("ANGINA" %in% names(dig_data)) factor (ANGINA, levels = c(0,1), labels = c("No", "Yes")) else NULL,
-    DIGUSE_LABEL = if ("DIGUSE" %in% names(dig_data)) factor (DIGUSE, levels = c(0,1), labels = c("No", "Yes")) else NULL,
+    ANGINA_LABEL = if ("ANGINA" %in% names(pick(everything()))) factor(ANGINA, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
+    DIGUSE_LABEL = if ("DIGUSE" %in% names(pick(everything()))) factor(DIGUSE, levels = c(0, 1), labels = c("No", "Yes")) else NULL,
+    DIGUSE_LABEL = factor (DIGUSE, levels = c(0,1), labels = c("No", "Yes")),
     DEATH_LABEL = factor(DEATH, levels = c(0,1), labels = c("Alive", "Death")),
     DWHF_LABEL = factor(DWHF, levels = c(0,1), labels = c("No Event", "Death or HF Hosp")),
-    WHF_LABEL = if ("WHF" %in% names(dig_data)) factor(WHF, levels = c(0,1), labels = c("No Hosp", "HF Hosp")) else NULL,
-    HOSP_LABEL = if("HOSP" %in% names(dig_data)) factor(HOSP, levels =c(0,1), labels = c("No Hosp", "Any Hosp")) else NULL
+    WHF_LABEL = if ("WHF" %in% names(pick(everything()))) factor(WHF, levels = c(0, 1), labels = c("No Hosp", "HF Hosp")) else NULL,
+    HOSP_LABEL = if ("HOSP" %in% names(pick(everything()))) factor(HOSP, levels = c(0, 1), labels = c("No Hosp", "Any Hosp")) else NULL,
+    FUNCTCLS_LABEL = if ("FUNCTCLS" %in% names(pick(everything())))factor(FUNCTCLS, levels = c(1, 2, 3, 4), labels = c("Class I", "Class II", "Class III", "Class IV")) else NULL
   )
 col_placebo <- "brown"
 col_digoxin <- "gold"
+
+var_labels <- c(
+  AGE = "Age at Randomization (Years)",
+  SYSBP = "Systolic Blood Pressure (mmHg)",
+  DIABP = "Diastolic Blood Pressure (mmHg)",
+  BMI = "Body Mass Index (kg/m^2)",
+  HEARTRTE = "Heart Rate (beats/min)",
+  CHFDUR = "Duration of CHF (Months)",
+  CHESTX = "Chest X-Ray CT-Ratio",
+  NSYM = "Symptoms Sum (NSYM, Q13-Q20)",
+  EJF_PER = "Ejection Fraction (%)",
+  KLEVEL = "Serum Potassium (KLEVEL)",
+  CREAT = "Serum Creatinine (mg/dL)",
+  FUNCTCLS_LABEL = "NYHA Functional Class",
+  HYPERTEN_LABEL = "History of Hypertension",
+  DIABETES_LABEL = "History of Diabetes",
+  PREVMI_LABEL = "Previous Myocardial Infarction",
+  ANGINA_LABEL = "Current Angina",
+  TRTMT_LABEL = "Treatment Group",
+  SEX_LABEL = "Patient Sex",
+  RACE_LABEL = "Race",
+  DEATH_LABEL = "Vital Status (DEATH)",
+  DWHF_LABEL = "Primary Endpt: Death or HF Hosp (DWHF)",
+  WHF_LABEL = "Worsening HF Hospitalization (WHF)",
+  HOSP_LABEL = "Any Hospitalization (HOSP)"
+)
+get_var_label <- function(x){
+  if(!is.null(x) && x %in% names(var_labels)) unname(var_labels[[x]]) else x
+}
 #Creating UI for app
 
 ui <- page_navbar(
@@ -37,8 +75,8 @@ ui <- page_navbar(
                    preset = "bootstrap",
                    base_font = font_google("Inter"),
                    heading_font = font_google("Montserrat"),
-                   primary = "#1E3A8A",
-                   secondary = "#475569"
+                   primary = "navy",
+                   secondary = "slategrey"
   ),
   
   title = "Dig Trial Dashboard",
@@ -51,12 +89,10 @@ padding-top: 6px !important;
 padding-bottom: 6px !important;
 box-shadow: 0 2px 4px rgba(0,0,0,0,0.04);
 }
-
 .navbar .container-fluid {
 position: static !important;
 min-height: 40px;
 }
-
 .navbar-brand {
 position: absolute !important;
 transform: translate(-50%, -50%) !important;
@@ -71,37 +107,39 @@ margin: 0 !important;
 padding: 4px 16px !important;
 border-radius: 999px
 }
-
 .card{
 border-radius: 10px !important;
 border: 1px solid #E2E8FO !important;
 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0 , 0, 0.02) !important;
 transition: transform 0.15s ease;
 }
-
 .card{
 border-radius: 10px !important;
 border: 1px solid #E2E8F0 !important;
 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
 }
 .card-header{
-background-color: #FFFFFF !important;
+
 border-bottom: 1px solid #F1F5F9 !important;
 font-weight: 700 !important;
 font-size: 1.02rem !important;
-color: #0F172A !important;
+
 padding: 14px 18px !important;
 }
+
+.card:hover {
+  transform: translateY(-2px);
+}
 .sidebar {
-background-color :#F8FAFC !important;
-border-right: 1px solid #E2E8F0 !important;
+
+border-right: 1px solid #E2E8F0  !important;
 }
 }"))
   ),
   
   sidebar = sidebar(
     width = 300,
-    title = h5("Cohort Filters", class = "fw-bold text-dark mb-3"),
+    title = h5("Cohort Filters", class = "fw-bold mb-3"),
     input_dark_mode(id = "dark_mode", mode = "light"),
     selectInput("filter_trt", "Select Treatment Group:", choices = c("All", "Placebo", "Digoxin")),
     selectInput("filter_sex", "Select Patient Sex:", choices = c("All", "Male", "Female")),
@@ -112,6 +150,56 @@ border-right: 1px solid #E2E8F0 !important;
       max = max(dig_data$AGE, na.rm = TRUE),
       value = c(min(dig_data$AGE, na.rm = TRUE),
                 max(dig_data$AGE, na.rm = TRUE))
+    ),
+    tags$hr(class = "my-2"),
+    h6("Dataset Explorer Axes", class = "fw-bold mb-2"),
+    selectInput(
+      inputId = "smart_y",
+      label = "Primary Metric (Y-Axis):",
+      choices = list(
+        "Demographics & Physical" = c(
+          "Age (Years)" = "AGE",
+          "Systolic BP (mmHg)" = "SYSBP",
+          "Diastolic BP (mmHg)" = "DIABP",
+          "Body Mass Index (BMI)" = "BMI",
+          "Heart Rate (bpm)" = "HEARTRTE",
+          "CHF Duration (Months)" = "CHFDUR",
+          "Chest X-Ray CT-Ratio" = "CHESTX",
+          "Symptom Sum (NSYM)" = "NSYM"
+        ),
+        "Lab & Clinical Measurements" = c(
+          "Ejection Fraction (%)" = "EJF_PER",
+          "Serum Potassium (KLEVEL)" = "KLEVEL",
+          "Serum Creatinine (CREAT)" = "CREAT"
+        ),
+        "Baseline Medical Conditions" = c(
+          "NYHA Functional Class" = "FUNCTCLS_LABEL",
+          "Hypertension Flag" = "HYPERTEN_LABEL",
+          "Diabetes Flag" = "DIABETES_LABEL",
+          "Prior MI Flag" = "PREVMI_LABEL",
+          "Current Angina Flag" = "ANGINA_LABEL"
+        ),
+        "Trial Endpoints" = c(
+          "All-Cause Mortality" = "DEATH_LABEL",
+          "Primary Endpt: Death or HF Hosp (DWHF)" = "DWHF_LABEL",
+          "Worsening HF Hosp (WHF)" = "WHF_LABEL",
+          "Any Hospitalization (HOSP)" = "HOSP_LABEL"
+        )
+      ),
+      selected = "SYSBP"
+    ),
+    selectInput(
+      inputId = "smart_x",
+      label = "Compare Against (Grouping / X-Axis):",
+      choices = c(
+        "Treatment Group" = "TRTMT_LABEL",
+        "Patient Sex" = "SEX_LABEL",
+        "Race" = "RACE_LABEL",
+        "NYHA Functional Class" = "FUNCTCLS_LABEL",
+        "Patient Age (Years)" = "AGE",
+        "Body Mass Index (BMI)" = "BMI"
+      ),
+      selected = "TRTMT_LABEL"
     ),
     actionButton("reset_filters", "Reset All Filters", class = "btn-outline-secondary btn-sm w-100 mt-2", icon = icon("rotate-left"))
   ),
@@ -153,8 +241,12 @@ border-right: 1px solid #E2E8F0 !important;
             "The total number of patients who passed away from any cause during the follow-up period."
           ),
           tags$li(
-            strong("Heart Failure Hospitalization (DWHF): "),
+            strong("Primary Endpoint — Death or HF Hosp (DWHF): "),
             "Whether a patient died or had to be admitted to the hospital due to worsening heart failure symptoms."
+          ),
+          tags$li(
+            strong("Worsening HF Hospitalization (WHF) & Any Hospitalization (HOSP): "),
+            "Hospital admissions tracked separately for worsening heart failure and for any cause."
           ),
           tags$li(
             strong("Ejection Fraction (EJF_PER): "),
@@ -163,6 +255,10 @@ border-right: 1px solid #E2E8F0 !important;
           tags$li(
             strong("Blood Pressure (SYSBP / DIABP): "),
             "Systolic BP (top number) measures pressure when the heart beats; Diastolic BP (bottom number) measures pressure when the heart rests between beats."
+          ),
+          tags$li(
+            strong("NYHA Functional Class (FUNCTCLS): "),
+            "A clinical grading of how much physical symptoms and activity limitations affect a heart failure patient."
           )
         )
       ),
@@ -170,6 +266,7 @@ border-right: 1px solid #E2E8F0 !important;
         card_header("Trial Snapshot & How to Use This Dashboard"),
         tags$ul(
           tags$li(strong("Total Participants: "), "6,800 patients enrolled across multiple clinical centers."),
+          tags$li(strong("Medical Conditions & Vitals Tracked: "), "Hypertension, Diabetes, Prior MI, Current Angina, NYHA Class, CHF Duration, Chest X-Ray CT-Ratio, Symptom Sum, Potassium, and Creatinine."),
           tags$li(strong("Explore Dataset: "), "Select any variable below.")
           )
         )
@@ -189,6 +286,7 @@ border-right: 1px solid #E2E8F0 !important;
         title = "Filtered Patients",
         value = textOutput("val_total"),
         showcase = icon("users"),
+        showcase_layout = "left center",
         theme = "primary"
       ),
       
@@ -196,6 +294,7 @@ border-right: 1px solid #E2E8F0 !important;
         title = "All Cause Mortality Events",
         value = textOutput("val_deaths"),
         showcase = icon("heart-pulse"),
+        showcase_layout = "left center",
         theme = "teal"
       )
     ),
@@ -213,7 +312,6 @@ border-right: 1px solid #E2E8F0 !important;
       
       card(
         card_header("Age vs. Health Measure (Scatter Plot)"),
-        
         selectInput(
           inputId = "scatter_y",
           label = "Compare Age Against:",
@@ -226,69 +324,23 @@ border-right: 1px solid #E2E8F0 !important;
         ),
         
         plotOutput("plot_scatter"),
-        
         tags$div(
           style = "padding: 8px 12px; background-color: rgba(0, 0, 0, 0.03); border-radius: 6px; font-size: 0.88rem; margin-top: 6px;",
           uiOutput("clinical_summary")
         )
       )
     ),
-    
+    # Dropdown Plots
     layout_column_wrap(
       width = 1,
       card(
-        card_header("Dataset Explorer (Choose the option)"),
-        layout_sidebar(
-          sidebar = sidebar(
-            width = 310,
-            selectInput(
-              inputId = "smart_y",
-              label = "Primary Metric (Y-Axis):",
-              choices = list(
-                "Demographics & Physical" = c(
-                  "Age (Years)" = "AGE",
-                  "Systolic BP (mmHg)" = "SYSBP",
-                  "Diastolic BP (mmHg)" = "DIABP",
-                  "Body Mass Index (BMI)" = "BMI",
-                  "Heart Rate (bpm)" = "HEARTRTE"
-                ),
-                "Lab & Clinical Measurements" = c(
-                  "Ejection Fraction (%)" = "EJF_PER",
-                  "Serum Potassium (KLEVEL)" = "KLEVEL",
-                  "Serum Creatinine (CREAT)" = "CREAT"
-                ),
-                "Baseline Medical Conditions" = c(
-                  "Hypertension Flag" = "HYPERTEN_LABEL",
-                  "Diabetes Flag" = "DIABETES_LABEL",
-                  "Prior MI Flag" = "PREVMI_LABEL"
-                ),
-                "Trial Endpoints" = c(
-                  "All-Cause Mortality" = "DEATH_LABEL",
-                  "Death or HF Hospitalization" = "DWHF_LABEL"
-                )
-              ),
-              selected = "SYSBP"
-            ),
-            selectInput(
-              inputId = "smart_x",
-              label = "Compare Against (Grouping/ X-Axis):",
-              choices = c(
-                "Treatment Group" = "TRTMT_LABEL",
-                "Patient Sex" = "SEX_LABEL",
-                "Race" = "RACE_LABEL",
-                "Patient Age (Years)" = "AGE",
-                "Body Mass Index (BMI)" = "BMI"
-              ),
-              selected = "TRTMT_LABEL"
-            ),
-            tags$div(
-              style = "font-size: 0.82rem; color: #64748B; margin-top: 8px;",
-              "Automatically routes continous variables to scatter plots/boxplots and categorical pairs to bar charts."
-            )
-          ),
-          plotOutput("plot_smart_explorer", height = "390px")
+        card_header("Dataset Explorer"),
+        plotOutput("plot_smart_explorer", height = "390px",fill = FALSE),
+        tags$div(
+          style = "font-size: 0.82rem; color: #64748B; margin-top: 8px;",
+          "Automatically routes continous variables to scatter plots/boxplots and categorical pairs to bar charts."
         )
-      )
+          )
     ),
     #Comorbidity and Outcome chart
     layout_column_wrap(
@@ -296,7 +348,7 @@ border-right: 1px solid #E2E8F0 !important;
       card(
         card_header("Clinical History & Outcomes by Treatment Group"),
         uiOutput("clinical_interpretation"),
-        plotOutput("plot_comorbidities")
+        plotOutput("plot_comorbidities",height = "320px", fill = FALSE)
       )
     ),
     # Patient records
@@ -428,7 +480,7 @@ server <- function(input, output, session) {
         theme_minimal(base_size = 12) +
         theme(
           legend.position = "top", legend.title = element_blank(),
-          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
         labs(x = x_var, y = y_var, color = "Treatment Group")
@@ -437,12 +489,25 @@ server <- function(input, output, session) {
       #jitter boxplot for continous y vs categorical x
       ggplot(plot_data, aes(x = .data[[x_var]], y = .data[[y_var]], fill = .data[[x_var]])) +
         geom_boxplot(alpha = 0.70, outlier.shape = NA, width = 0.45) +
-        geom_jitter(width = 0.15, alpha = 0.20, size = 1.2, color = "#1E293B") +
-        scale_fill_manual(values = c("Placebo" = col_placebo, "Digoxin" = col_digoxin, "Male" = "#2563EB", "Female" = "#DB2777", "White" = "#0D9488", "Non-white" = "#D97706")) +
+        geom_jitter(width = 0.15, alpha = 0.20, size = 1.2, color = "grey30") +
+        scale_fill_manual(
+          values = c(
+            "Placebo" = col_placebo, 
+            "Digoxin" = col_digoxin, 
+            "Male" = "royalblue", 
+            "Female" = "deeppink", 
+            "White" = "darkseagreen", 
+            "Non-white" = "thistle",
+            "Class I" = "forestgreen",
+            "Class II" = "darkblue",
+            "Class III" = "darkorange2",
+            "Class IV" = "firebrick"
+            
+            )) +
         theme_minimal(base_size = 12) +
         theme(
           legend.position = "none",
-          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
         labs(x = x_var, y = y_var)
@@ -457,7 +522,7 @@ server <- function(input, output, session) {
         theme_minimal(base_size = 12) +
         theme(
           legend.position = "top",
-          axis.title = element_text(face = "bold", size = 11, color = "#334155"),
+          axis.title = element_text(face = "bold", size = 11, color = "saddlebrown"),
           plot.margin = margin(6, 12, 6 ,12)
         ) +
         labs(x = x_var, y = "Share of Group (%)", fill = y_var)
@@ -505,7 +570,7 @@ server <- function(input, output, session) {
   }
   
   HTML(paste0(
-    "<div style = 'background-color: #f8f9fa; border-left: 4px solid #0d6efd; padding: 12px 16px; margin: 8px 0 16px; border-radius: 4px; font-size: 0.93rem; color: #212529;'>",
+    "<div style = 'background-color: gray98; border-left: 4px solid dodgerblue3; padding: 12px 16px; margin: 8px 0 16px; border-radius: 4px; font-size: 0.93rem; color: grey13;'>",
     "<strong> Clinical Interpretation (Filtered Cohort, n = ", format(nrow(curr_df), big.mark = ","), "):</strong>",
     "In this sub cohort, digoxin therapy demonstrates ", hosp_statement, ", while ", mort_statement, ".",
     "Baseline comorbidity rates above reflect pre-existing risk profiles across trial arms.",
@@ -516,9 +581,12 @@ server <- function(input, output, session) {
   output$plot_comorbidities <- renderPlot({
     summary_df <- dig_sub() |>
       summarise(
-        Hypertension = mean(HYPERTEN == 1, na.rm = TRUE) * 100,
-        Diabetes = mean(DIABETES == 1, na.rm = TRUE) * 100,
-        `Prior Heart Attack` = mean(PREVMI == 1, na.rm = TRUE) * 100,
+        `Hypertension (HYPERTEN)` = mean(HYPERTEN == 1, na.rm = TRUE) * 100,
+        `Diabetes(DIABETES) `= mean(DIABETES == 1, na.rm = TRUE) * 100,
+        `Prior Heart Attack(PREVMI)` = mean(PREVMI == 1, na.rm = TRUE) * 100,
+        `Current Angina (ANGINA)` = mean(ANGINA == 1, na.rm = TRUE) * 100,
+        `Any Hosp (HOSP)` = mean(HOSP == 1, na.rm = TRUE) * 100,
+        `Worsening HF Hosp (WHF)` = mean(WHF == 1, na.rm = TRUE) * 100,
         `Mortality (DEATH)` = mean(DEATH == 1, na.rm = TRUE) * 100,
         `Death or HF Hosp` = mean(DWHF == 1, na.rm = TRUE) * 100,
         .by = TRTMT_LABEL
@@ -556,6 +624,7 @@ server <- function(input, output, session) {
         "Age" = AGE,
         "Sex" = SEX_LABEL,
         "Race" = RACE_LABEL,
+        "NYHA Class" = FUNCTCLS_LABEL,
         "BMI" = BMI,
         "Systolic BP" = SYSBP,
         "Diastolic BP" = DIABP,
