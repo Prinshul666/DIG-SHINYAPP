@@ -134,6 +134,35 @@ padding: 14px 18px !important;
 
 border-right: 1px solid #E2E8F0  !important;
 }
+
+/* Heartbeat animation */
+
+@keyframes heartbeat {
+0%, 100% {
+transform: scale(1);
+}
+15% {
+transform: scale(1.18);
+}
+30% {
+transform: scale(1);
+}
+45%{
+transform: scale(1.12);
+}
+60% {
+transform: scale(1);
+}
+}
+.heartbeat {
+display: inline-block;
+animation: heartbeat 1.6s ease-in-out 3;
+}
+@media (prefers-reduced-motion: reduce) {
+.heartbeat {
+animation: none;
+}
+}
 "))
   ),
   
@@ -252,7 +281,7 @@ border-right: 1px solid #E2E8F0  !important;
       value_box(
         title = "All Cause Mortality Events",
         value = textOutput("val_deaths"),
-        showcase = icon("heart-pulse"),
+        showcase = icon("heart-pulse", class = "heartbeat"),
         showcase_layout = "left center",
         theme = "teal"
       )
