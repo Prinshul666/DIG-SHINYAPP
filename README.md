@@ -1,18 +1,18 @@
 # DIG-SHINY — DIG Trial Clinical Dashboard
 
-A bslib (Bootstrap 5) and tidyverse based interactive clinical trial dashboard to analyse data from the Digitalis Investigation Group (DIG) heart failure clinical trial (DIG.csv).
+A 'bslib' (Bootstrap 5) and 'tidyverse' based interactive clinical trial dashboard to analyse data from the Digitalis Investigation Group (DIG) heart failure clinical trial ('DIG.csv').
 
 ## 1.Introduction
-The DIG Trial was a double blinded, randomised controlled trial investigating the impact of digoxin on patients’ mortality and admission rates in comparison to a placebo; for those with heart failure (n=6,800). The dashboard combines a lay summary alongside interactive data displays, automated data analysis and downloadable patient data.
+The DIG Trial was a double blinded, randomized controlled trial investigating the impact of digoxin on patients’ mortality and admission rates in comparison to a placebo; for those with heart failure (n=6,800). The dashboard combines a plain language summary alongside interactive data displays, automated data analysis and downloadable patient record data table.
 
-### Functionality
-### 1. Filters & Styling (Sidebar)
-Light/Dark Mode: A bslib::input_dark_mode() option is available. Fonts and styling are then automatically updated for each mode.
+### Dashboard Functionality
+### 1. Filters & Styling (Sidebar) Controls
+Light/Dark Mode: A bslib::input_dark_mode() Dynamic theme switching between light and dark theme . Fonts and styling themes automatically update for each mode.
 Data Filters: Patients can be filtered according to:
-TRTMT (All, Placebo and Digoxin)
-SEX (All, Male and Female)
-AGE (Interactive slider representing the age range of patients at entry to the study).
-Clear All: A single ‘rotate-left’ button which clears all filters and re-displays the original 6,800 patient data set.
+TRTMT (All, Placebo or Digoxin)
+SEX (All, Male or Female)
+AGE Range (Interactive slider representing the age range of patients at entry to the study).
+Reset : A single ‘rotate-left’ button which clears all filters and re-displays the original 6,800 patient data set.
 
 ### 2. Information & Background
 
