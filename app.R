@@ -100,10 +100,10 @@ left: 50% !important;
 top: 50% !important;
 font-family: 'Montserrat', sans-serif !important;
 font-weight: 800 !important;
-font-size: 1.45rem !important;
+font-size: 1.35rem !important;
 line-height: 1.2 !important;
 letter-spacing: 0.02em;
-margin: 0 !important;
+margin-right: 1rem !important;
 padding: 4px 16px !important;
 border-radius: 999px
 }
