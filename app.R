@@ -163,6 +163,42 @@ animation: heartbeat 1.6s ease-in-out 3;
 animation: none;
 }
 }
+/* ADDED: Pulse-syncing card border keyframes and class */
+
+@keyframes border-pulse {
+0%, 100% {
+border-color: rgba(13, 148, 136, 0.35);
+box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.25);
+}
+15% {
+border-color: rgba(13, 148, 136, 0.95);
+box-shadow: 0 0 0 5px rgba(13, 148, 136, 0.18);
+}
+30% {
+border-color: rgba(13, 148, 136, 0.35);
+box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+}
+45% {
+border-color: rgba(13, 148, 136, 0.8);
+box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+60% {
+border-color: rgba(13, 148, 136, 0.35);
+box-shadow: 0 0 0 0 rgba(13, 148, 136, 0);
+}
+}
+.pulse-border {
+border-width: 2px !important;
+border-style: solid !important;
+animation: border-pulse 1.6s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+.heartbeat,
+.pulse-border { /* ADDED: reduced-motion support for .pulse-border */
+animation: none;
+}
+}
 "))
   ),
   
@@ -283,7 +319,8 @@ animation: none;
         value = textOutput("val_deaths"),
         showcase = icon("heart-pulse", class = "heartbeat"),
         showcase_layout = "left center",
-        theme = "teal"
+        theme = "teal",
+        class = "pulse-border"
       )
     ),
     
